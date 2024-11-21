@@ -1,70 +1,119 @@
+from flask import Flask, json, jsonify
 from deepface import DeepFace
-import matplotlib.pyplot as plt
-import numpy as np
 import cv2
+import os
+from datetime import timedelta
+import tempfile
+import pandas as pd
 
-# List of available backends, models, and distance metrics
-backends = ["opencv", "ssd", "dlib", "mtcnn", "retinaface"]
-models = ["VGG-Face", "Facenet", "Facenet512", "OpenFace", "DeepFace", "DeepID", "ArcFace", "Dlib", "SFace"]
-metrics = ["cosine", "euclidean", "euclidean_l2"]
+app = Flask(__name__)
 
-# Path to the image for face recognition
-img = "C:\\Users\\vipef\\source\\gdbs_fr\\Data\\Murad\\1.jpg"
-img2 = "C:\\Users\\vipef\\source\\gdbs_fr\\Data\\Murad\\1.jpg"
+# Константы
+test_data_path = "test_data/"
+video_filename = "video.mp4"
+db_path = os.path.join(test_data_path, "db")
+video_path = os.path.join(test_data_path, video_filename)
+results_storage_path = "results.json"
 
-def face_recognition(img):
-    # Perform face recognition on the provided image
-    # Find faces and identify people using a specific model and distance metric
-    people = DeepFace.find(img_path=img, db_path="C:\\Users\\vipef\\source\\gdbs_fr\\Data\\", model_name=models[2], distance_metric=metrics[1])
-    print(people)
-    # Display the original image
 
-    result = DeepFace.verify(
-  img1_path = img,
-  img2_path = img,
-)
+@app.route('/process_video', methods=['POST'])
+def process_video():
+    try:
+        # Открываем видео
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            print("Ошибка: видеофайл не может быть открыт")
+            return jsonify({"error": "Cannot open video file"}), 400
 
-def realtime_face_recognition():
-    # Define a video capture object
-    vid = cv2.VideoCapture(0)
+        print("Видео успешно открыто")
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_interval = int(fps)  # 1 кадр в секунду
+        results = {}
+        frame_id = 0
 
-    while True:
-        # Capture the video frame by frame
-        ret, frame = vid.read()
+        # Читаем видео кадр за кадром
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Кадры закончились или произошла ошибка чтения")
+                break
 
-        # Perform face recognition on the captured frame
-        # Find faces and identify people using a specific model and distance metric
-        people = DeepFace.find(img_path=frame, db_path="Data/", model_name=models[2], distance_metric=metrics[2], enforce_detection=False)
+            if frame_id % frame_interval == 0:  # Обрабатываем 1 кадр в секунду
+                timestamp = str(timedelta(seconds=frame_id // fps))
+                print(f"Обрабатывается кадр: {frame_id}")
+                print(f"Обрабатывается временная метка: {timestamp}")
 
-        for person in people:
-            # Retrieve the coordinates of the face bounding box
-            x = person['source_x'][0]
-            y = person['source_y'][0]
-            w = person['source_w'][0]
-            h = person['source_h'][0]
+                try:
 
-            # Draw a rectangle around the face
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_frame_file:
+                        temp_frame_path = temp_frame_file.name
+                        cv2.imwrite(temp_frame_path, frame)
 
-            # Get the person's name and display it on the image
-            name = person['identity'][0].split('/')[1]
-            cv2.putText(frame, name, (x, y), cv2.FONT_ITALIC, 1, (0, 0, 255), 2)
+                    print(f"Ищем лица в кадре...")
+                    detections = DeepFace.find(
+                        # Здесь можно выбрать модель, лучшая это FaceNet512
+                        img_path=temp_frame_path,
+                        db_path=db_path,
+                        enforce_detection=False,
+                        silent=True
+                    )
 
-        # Display the resulting frame
-        cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('frame', 960, 720)
-        cv2.imshow('frame', frame)
+                    # Отладка
+                    # print(f"Тип detections: {type(detections)}")
+                    # print(f"Содержимое detections: {detections}")
 
-        # Check if the 'q' button is pressed to quit the program
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+                    if isinstance(detections, list) and detections:
+                        for detection in detections:
+                            if isinstance(detection, pd.DataFrame) and not detection.empty:
+                                for _, row in detection.iterrows():
+                                    person_name = os.path.basename(row['identity']).split('.')[0]
+                                    if person_name not in results:
+                                        results[person_name] = []
+                                    if timestamp not in results[person_name]:  # Избегаем дублирования
+                                        results[person_name].append(timestamp)
+                                    print(f"На кадре был обнаружен {person_name}.")
+                            else:
+                                print("Пустой DataFrame или некорректные данные в списке.")
+                    else:
+                        print("Совпадения не найдены или результат имеет неверный формат.")
+                    os.remove(temp_frame_path)
 
-    # Release the video capture object and close all windows
-    vid.release()
-    cv2.destroyAllWindows()
+                except Exception as e:
+                    print(f"Ошибка обработки кадра на временной метке {timestamp}: {e}")
+            frame_id += 1
+        cap.release()
 
-# Perform face recognition on a single image
-face_recognition(img)
+        if results:
+            formatted_results = {person: {"timestamps": times} for person, times in results.items()}
+            #print(f"Результаты для сохранения: {formatted_results}") 
+            with open(results_storage_path, "w") as f:
+                json.dump(formatted_results, f, indent=4)
+            print(f"Результаты успешно записаны в файл {results_storage_path}")
+        else:
+            print("Результаты пусты, запись пропущена.")
 
-# Perform real-time face recognition using the webcam
-# realtime_face_recognition()
+        return jsonify({"message": "success", "results": results})
+
+    except Exception as e:
+        print(f"Ошибка в обработке видео: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/results', methods=['GET'])
+def get_results():
+    try:
+        if os.path.exists(results_storage_path):
+            with open(results_storage_path, "r") as f:
+                results = json.load(f)
+            print(f"Результаты загружены из {results_storage_path}")
+            return jsonify(results)
+        else:
+            print("Файл результатов отсутствует")
+            return jsonify({"error": "No results found. Process a video first."}), 404
+    except Exception as e:
+        print(f"Ошибка при чтении файла результатов: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
