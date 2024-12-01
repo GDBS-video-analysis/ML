@@ -5,6 +5,7 @@ from datetime import timedelta
 import tempfile
 from deepface import DeepFace
 import pandas as pd
+from app.build_intervals import build_intervals
 from app.utils import generate_results_file_path
 
 def process_video_file(video_path, biometry_path):
@@ -54,9 +55,14 @@ def process_video_file(video_path, biometry_path):
     return results
 
 
-def load_results():
+def load_results(max_gap_minutes=5):
     results_file = generate_results_file_path()
     if not os.path.exists(results_file):
         raise FileNotFoundError("Results file does not exist")
     with open(results_file, "r") as f:
-        return json.load(f)
+        raw_data = json.load(f) 
+    processed_data = {
+        employee: build_intervals(timestamps, max_gap_minutes) 
+        for employee, timestamps in raw_data.items()
+    }
+    return processed_data
