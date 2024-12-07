@@ -1,0 +1,41 @@
+name: gdbs_ml
+
+services:
+  db:
+    image: postgres:alpine3.20
+    environment:
+      - POSTGRES_USER=$POSTGRES_USERNAME
+      - POSTGRES_DB=$POSTGRES_DATABASE
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_PORT=$POSTGRES_PORT
+    volumes:
+      - ./db_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+  minio:
+    image: minio/minio:latest
+    command: server --console-address ":9001" /data/
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    volumes:
+      - ./minio_data:/data
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    
+  back:
+    container_name: back
+    image: elecshen/gdbs_back:dev
+    environment:
+      - ASPNETCORE_URLS=$ASPNETCORE_URLS
+      - ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT
+      - DB_CONNECTION_STRING=$DB_CONNECTION_STRING
+    ports:
+      - '80:80'
+    depends_on:
+      db:
+        condition: service_started
+      minio:
+        condition: service_started
