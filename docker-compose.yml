@@ -10,6 +10,12 @@ services:
       - POSTGRES_PORT=$POSTGRES_PORT
     volumes:
       - ./db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
       - '5432:5432'
 
@@ -33,9 +39,26 @@ services:
       - ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT
       - DB_CONNECTION_STRING=$DB_CONNECTION_STRING
     ports:
+      - '5000:80'
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    
+  pgadmin:
+    container_name: pg
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: 1234
+      PGADMIN_DEFAULT_PASSWORD: 1234
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    ports:
       - '80:80'
     depends_on:
       db:
-        condition: service_started
-      minio:
-        condition: service_started
+        condition: service_healthy
+        
+volumes:
+  pgadmin:
