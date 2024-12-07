@@ -11,7 +11,7 @@ services:
     volumes:
       - ./db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USERNAME"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,6 +38,10 @@ services:
       - ASPNETCORE_URLS=$ASPNETCORE_URLS
       - ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT
       - DB_CONNECTION_STRING=$DB_CONNECTION_STRING
+      - MINIO_ENDPOINT=$MINIO_ENDPOINT
+      - MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
+      - MINIO_SECRET_KEY=$MINIO_SECRET_KEY
+      - MINIO_BUCKET=$MINIO_BUCKET
     ports:
       - '5000:80'
     depends_on:
@@ -50,7 +54,7 @@ services:
     container_name: pg
     image: dpage/pgadmin4
     environment:
-      PGADMIN_DEFAULT_EMAIL: 1234
+      PGADMIN_DEFAULT_EMAIL: 1234@a.ru
       PGADMIN_DEFAULT_PASSWORD: 1234
     volumes:
       - pgadmin:/var/lib/pgadmin
