@@ -20,6 +20,7 @@ class Processing:
         video_path = await minio_service.get_event_video(self.event_id)
 
         # Обрабатываем видео с помощью модели
-        results = model_service.process_video(video_path=video_path, employee_folders=employees_bio)
+        results = model_service.process_video_final(video_path=video_path, employee_folders=employees_bio)
 
+        # Записываем полученный json файл в базу данных
         return results
