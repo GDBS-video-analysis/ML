@@ -3,19 +3,33 @@ from app.config import Config
 
 postgres_uri = Config.POSTGRES_URI
 
-async def insert_video_status(videofile_id: int, event_id: int, status: int) -> int:
+async def insert_video_status(event_id: int, status: int) -> int:
     """
-    Вставляет новую запись в таблицу video_status и возвращает analisys_id.
+    Вставляет новую запись в таблицу video_analisys_statuses и возвращает analisys_id.
+    Использует videofile_id из таблицы events.
     """
     conn = await asyncpg.connect(postgres_uri)
     try:
-        query = """
+        get_videofile_id_query = """
+        SELECT "videofile_id"
+        FROM public."events"
+        WHERE "event_id" = $1
+        """
+        row = await conn.fetchrow(get_videofile_id_query, event_id)
+        
+        if not row:
+            raise ValueError(f"No event found with event_id {event_id}")
+
+        videofile_id = row["videofile_id"]
+
+        insert_query = """
         INSERT INTO public.video_analisys_statuses ("videofile_id", "event_id", "status")
         VALUES ($1, $2, $3)
         RETURNING "analisys_id"
         """
-        row = await conn.fetchrow(query, videofile_id, event_id, status)
-        return row['analisys_id']
+        insert_row = await conn.fetchrow(insert_query, videofile_id, event_id, status)
+
+        return insert_row["analisys_id"]
     finally:
         await conn.close()
 
