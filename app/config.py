@@ -27,3 +27,4 @@ class Config:
     LOCAL_DIR = "./processing_data"
     BIOMETRY_DIR = LOCAL_DIR + "/db"
     VIDEO_DIR = LOCAL_DIR
+    STRANGERS_DIR = LOCAL_DIR + "/db_unknown"
