@@ -41,19 +41,16 @@ def process_video_final(video_path, employee_folders):
 
         if frame_id % frame_interval == 0:
             timestamp = str(timedelta(seconds=frame_id // fps))
-            print(f"\nCurrent frame: {frame_id}")
-            print(f"Current timestamp: {timestamp}")
-
+            print(f" --- Frame: {frame_id} ||  Timestamp: {timestamp} --- \n")
+            print("Analyzing...\n")
             try:
                 with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_frame_file:
                     temp_frame_path = temp_frame_file.name
                     cv2.imwrite(temp_frame_path, frame)
 
-                print(f"Analyzing this frame...")
-
                 for employee_id, folder_path in employee_folders.items():
                     folder_path = os.path.normpath(folder_path)
-                    print(f"Analyzing employee with id={employee_id} on frame...")
+                    print(f"- Analyzing employee with id={employee_id} on frame...")
 
                     try:
                         detections = DeepFace.find(
@@ -70,13 +67,13 @@ def process_video_final(video_path, employee_folders):
                                         results[employee_id] = []
                                     if timestamp not in results[employee_id]:
                                         results[employee_id].append(timestamp)
-                                    print(f"An employee with id={employee_id} was found in the frame.")
+                                    print(f"- - An employee with id={employee_id} was found in the frame.")
                                     break
                         else:
-                            print(f"No matches were found for the employee with id={employee_id}.")
+                            print(f"- - No matches were found for the employee with id={employee_id}.")
 
                     except Exception as e:
-                        print(f"Matching error for employee with id={employee_id}.\nError: {e}")
+                        print(f"- - Matching error for employee with id={employee_id}.\nError: {e}")
 
                 # Обработка незнакомцев
                 print(f"Looking for unknown faces...")
@@ -101,11 +98,10 @@ def process_video_final(video_path, employee_folders):
                             for detection in detections:
                                 if isinstance(detection, pd.DataFrame) and not detection.empty:
                                     unknown_face_found = True
-                                    print("- Found an employee (ID: {employee_id}) on this frame.")
+                                    #print(f"- Found an employee (ID: {employee_id}) on this frame.")
                                     break
 
                     if not unknown_face_found:
-                        print("No employee found. Looking for unknown faces...")
                         face_identified = False
                         for unknown_id, unknown_data in unknown_faces.items():
 
@@ -133,9 +129,9 @@ def process_video_final(video_path, employee_folders):
 
                             unknown_faces[counter] = {"path": unknown_face_folder, "timestamps": [timestamp]}
                             counter += 1
-                            print("- New unknown face saved.")
+                            print("- - New unknown face saved.")
                         else:
-                            print(f"- Timestamps updated for known unknown face (ID: {face_id})")
+                            print(f"- - Timestamps updated for known unknown face (ID: {face_id})")
                             unknown_faces[face_id]["timestamps"].append(timestamp)
 
                 os.remove(temp_frame_path)

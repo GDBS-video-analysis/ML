@@ -82,7 +82,7 @@ async def insert_employee_marks(event_id: int, data: dict) -> None:
 
                 utc_datetime = datetime.strptime(local_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.utc)
 
-                print(f"- Timestamp to save (UTC): {utc_datetime}\n")
+                print(f"- Timestamp to save (UTC): {utc_datetime}")
 
                 await conn.execute(insert_query, event_id, employee_id, utc_datetime)
 
