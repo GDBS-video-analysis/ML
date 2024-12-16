@@ -9,9 +9,6 @@ import pandas as pd
 def process_video_final(video_path, employee_folders):
     """
     Обрабатывает видео, сопоставляя найденные лица с папками сотрудников и сохраняет фотографии незнакомцев.
-
-    :param video_path: Путь к видеофайлу.
-    :param employee_folders: Словарь {ID сотрудника: путь до папки с фотографиями}.
     :return: Кортеж из двух словарей:
         - Словарь {ID сотрудника: список временных меток присутствия}.
         - Словарь {номер_незнакомца: {"path": путь_до_фото, "timestamps": [временные_метки]}}.
@@ -159,13 +156,11 @@ def process_video_final(video_path, employee_folders):
     return results, unknown_faces
 
 # Поиск ТОЛЬКО сотрудников
+# [Deprecated]
 def process_video(video_path, employee_folders):
     """
+    [Deprecated]
     Обрабатывает видео, сопоставляя найденные лица с папками сотрудников.
-
-    :param video_path: Путь к видеофайлу.
-    :param employee_folders: Словарь {ID сотрудника: путь до папки с фотографиями}.
-    :return: Словарь {ID сотрудника: список временных меток присутствия}.
     """
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file '{video_path}' does not exist.")

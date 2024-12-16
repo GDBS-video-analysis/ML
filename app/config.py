@@ -13,8 +13,8 @@ class Config:
     )
 
     # MinIO
-    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
-    MINIO_FILES_DB_ENDPOINT = os.getenv("MINIO_FILES_DB_ENDPOINT", "localhost:9000")
+    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_FILES_DB_ENDPOINT = os.getenv("MINIO_FILES_DB_ENDPOINT", "minio:9000")
     MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "1234")
     MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "12345678")
     MINIO_BUCKET = os.getenv("MINIO_BUCKET", "dev")
