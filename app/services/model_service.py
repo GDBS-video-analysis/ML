@@ -41,7 +41,7 @@ def process_video_final(video_path, employee_folders):
 
         if frame_id % frame_interval == 0:
             timestamp = str(timedelta(seconds=frame_id // fps))
-            print(f" --- Frame: {frame_id} ||  Timestamp: {timestamp} --- \n")
+            print(f"\n --- Frame: {frame_id} ||  Timestamp: {timestamp} --- \n")
             print("Analyzing...\n")
             try:
                 with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_frame_file:
