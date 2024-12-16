@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import shutil
 from app.services import minio_service, model_service, db_service
 
 class Processing:
@@ -27,24 +28,26 @@ class Processing:
         event = self.event_id
 
         # Вставка информации о сотрудниках в БД
+        print("Saving employees data...\n")
         with open('processing_data/employees.json', 'r') as file:
-            employees_data = json.load(file)
+           employees_data = json.load(file)
 
         await db_service.insert_employee_marks(event_id=event, data=employees_data)
 
         # Вставка информации о незнакомцах в БД
+        print("Saving unknown faces data...\n")
         with open('processing_data/unknown_faces.json', 'r') as file:
             unknown_faces_data = json.load(file)
         await minio_service.save_unregister_persons_event(data=unknown_faces_data, event_id=event)
         
-        # Удаление всех файлов в папке processing_data с использованием pathlib
-        folder_path = Path('processing_data')
-        for file_path in folder_path.iterdir():
-            try:
-                if file_path.is_file():
-                    file_path.unlink()  # Удаляем файл
-                elif file_path.is_dir():
-                    file_path.rmdir()  # Удаляем пустую папку
-            except Exception as e:
-                print(f"Error during deleting processing data.\nPath: {file_path}\nError: {e}\n")
+    folder_path = Path('processing_data')
+    for file_path in folder_path.iterdir():
+        try:
+            if file_path.is_file():
+                file_path.unlink()  # Удаляем файл
+            elif file_path.is_dir():
+                shutil.rmtree(file_path)  # Рекурсивно удаляем папку и все её содержимое
+        except Exception as e:
+            print(f"Error during deleting processing data.\nPath: {file_path}\nError: {e}\n")
+        
         #return results
