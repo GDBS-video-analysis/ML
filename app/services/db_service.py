@@ -70,8 +70,6 @@ async def insert_employee_marks(event_id: int, data: dict) -> None:
         event_date_utc = row["date_time"].astimezone(pytz.utc)
         event_date = event_date_utc.strftime('%Y-%m-%d') 
 
-        print(f"Event date (UTC): {event_date}")
-
         insert_query = """
         INSERT INTO public.employee_marks_events (event_id, employee_id, videofile_mark)
         VALUES ($1, $2, $3)
@@ -84,44 +82,11 @@ async def insert_employee_marks(event_id: int, data: dict) -> None:
 
                 utc_datetime = datetime.strptime(local_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.utc)
 
-                print(f"Timestamp to save (UTC): {utc_datetime}")
+                print(f"- Timestamp to save (UTC): {utc_datetime}\n")
 
                 await conn.execute(insert_query, event_id, employee_id, utc_datetime)
 
     except Exception as e:
         print(f"\nError while inserting employees data in database:\n{e}\n")
-    finally:
-        await conn.close()
-
-async def insert_unknown_faces(event_id: int, unknown_faces_data: dict) -> None:
-    """
-    Вставляет записи о незнакомцах и их метках в таблицу unregister_person_marks_event.
-    Для каждого незнакомца сначала вставляется запись о нем с первой меткой появления, 
-    затем вставляются все его метки.
-    """
-    conn = await asyncpg.connect(postgres_uri)
-    try:
-        for unknown_face_id, face_data in unknown_faces_data.items():
-            path = face_data['path']
-            timestamps = face_data['timestamps']
-
-            # Вставка записи для первого появления незнакомца
-            first_timestamp = timestamps[0]
-            first_insert_query = """
-            INSERT INTO public.unregister_person_marks_event(event_id, videofile_fragment_id, videofile_mark)
-            VALUES ($1, $2, $3)
-            RETURNING unregister_person_id
-            """
-            first_insert_row = await conn.fetchrow(first_insert_query, event_id, path, first_timestamp)
-
-            unregister_person_id = first_insert_row["unregister_person_id"]
-
-            # Вставка всех последующих меток для незнакомца
-            insert_query = """
-            INSERT INTO public.unregister_person_marks_event(event_id, videofile_fragment_id, unregister_person_id, videofile_mark)
-            VALUES ($1, $2, $3, $4)
-            """
-            for timestamp in timestamps[1:]:  # Пропускаем первую метку, так как она уже вставлена
-                await conn.execute(insert_query, event_id, path, unregister_person_id, timestamp)
     finally:
         await conn.close()
