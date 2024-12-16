@@ -68,7 +68,6 @@ async def insert_employee_marks(event_id: int, data: dict) -> None:
             raise ValueError(f"No event found with event_id {event_id}")
         
         event_date_utc = row["date_time"].astimezone(pytz.utc)
-        event_date = event_date_utc.strftime('%Y-%m-%d') 
 
         insert_query = """
         INSERT INTO public.employee_marks_events (event_id, employee_id, videofile_mark)
@@ -78,13 +77,14 @@ async def insert_employee_marks(event_id: int, data: dict) -> None:
         for employee_id, timestamps in data.items():
             employee_id = int(employee_id)
             for timestamp in timestamps:
-                local_time_str = f"{event_date} {timestamp}"
+                
+                time_to_add_obj = datetime.strptime(timestamp, "%H:%M:%S") - datetime.strptime("00:00:00", "%H:%M:%S")
 
-                utc_datetime = datetime.strptime(local_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.utc)
+                # Добавляем timedelta к объекту datetime
+                new_event_date = event_date_utc + time_to_add_obj
+                print(f"- Timestamp to save (UTC): {new_event_date}")
 
-                print(f"- Timestamp to save (UTC): {utc_datetime}")
-
-                await conn.execute(insert_query, event_id, employee_id, utc_datetime)
+                await conn.execute(insert_query, event_id, employee_id, new_event_date)
 
     except Exception as e:
         print(f"\nError while inserting employees data in database:\n{e}\n")

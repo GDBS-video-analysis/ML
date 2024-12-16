@@ -83,7 +83,6 @@ async def save_unregister_persons_event(data, event_id):
             raise ValueError(f"No event found with event_id {event_id}")
         
         event_date_utc = row["date_time"].astimezone(pytz.utc)
-        event_date = event_date_utc.strftime('%Y-%m-%d') 
 
         for person_id, details in data.items():
             image_path = details["path"]
@@ -121,14 +120,14 @@ async def save_unregister_persons_event(data, event_id):
                 file_query, minio_path, file_name, file_size, "image/png", file_created_at
             )
 
-            first_timestamp = timestamps[0]
-            time_parts = list(map(int, first_timestamp.split(':')))
-            local_time_str = f"{event_date} {time_parts[0]:02}:{time_parts[1]:02}:{time_parts[2]:02}"
+            time_to_add_obj = datetime.strptime(timestamps[0], "%H:%M:%S") - datetime.strptime("00:00:00", "%H:%M:%S")
+
+            new_event_date = event_date_utc + time_to_add_obj
+            print(f"- Timestamp to save (UTC): {new_event_date}")
 
             # Создаем datetime объект с временной меткой
-            utc_datetime = datetime.strptime(local_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.utc)
 
-            print(f"First Timestamp to save (UTC): {utc_datetime}")
+            print(f"First Timestamp to save (UTC): {new_event_date}")
 
             mark_query = """
             INSERT INTO public.unregister_person_marks_events (event_id, videofile_fragment_id, videofile_mark)
@@ -137,7 +136,7 @@ async def save_unregister_persons_event(data, event_id):
             """
 
             unregister_person_id = await conn.fetchval(
-                mark_query, event_id, file_id, utc_datetime
+                mark_query, event_id, file_id, new_event_date
             )
 
             timestamps_query = """
@@ -147,16 +146,15 @@ async def save_unregister_persons_event(data, event_id):
             """
 
             for timestamp in timestamps[1:]:
-                # Преобразуем строку временной метки в объект datetime
-                time_parts = list(map(int, timestamp.split(':')))
-                local_time_str = f"{event_date} {time_parts[0]:02}:{time_parts[1]:02}:{time_parts[2]:02}"
 
-                utc_datetime = datetime.strptime(local_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.utc)
+                time_to_add_obj = datetime.strptime(timestamp, "%H:%M:%S") - datetime.strptime("00:00:00", "%H:%M:%S")
 
-                print(f"Timestamp to save (UTC): {utc_datetime}")
+                new_event_date = event_date_utc + time_to_add_obj
+
+                print(f"Timestamp to save (UTC): {new_event_date}")
 
                 await conn.execute(
-                    timestamps_query, event_id, file_id, unregister_person_id, utc_datetime
+                    timestamps_query, event_id, file_id, unregister_person_id, new_event_date
                 )
 
         print("- - All data about uknown guests saved in DB and MinIO correctly.\n")
