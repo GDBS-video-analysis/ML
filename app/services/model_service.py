@@ -1,3 +1,4 @@
+import json
 import os
 import cv2
 import tempfile
@@ -93,7 +94,6 @@ def process_video_final(video_path, employee_folders):
                     face_id = None 
 
                     for employee_id, folder_path in employee_folders.items():
-
                         detections = DeepFace.find(
                             img_path=face_img,
                             db_path=folder_path,
@@ -104,10 +104,11 @@ def process_video_final(video_path, employee_folders):
                             for detection in detections:
                                 if isinstance(detection, pd.DataFrame) and not detection.empty:
                                     unknown_face_found = True
+                                    print("- Found an employee (ID: {employee_id}) on this frame.")
                                     break
 
                     if not unknown_face_found:
-
+                        print("No employee found. Looking for unknown faces...")
                         face_identified = False
                         for unknown_id, unknown_data in unknown_faces.items():
 
@@ -123,9 +124,11 @@ def process_video_final(video_path, employee_folders):
                                         unknown_face_found = True
                                         face_identified = True
                                         face_id = unknown_id
+                                        print(f"- Found an existing unknown face (ID: {face_id})")
                                         break
 
                         if not face_identified:
+                            print("- New unknown face detected. Creating folder for this face.")
                             unknown_face_folder = os.path.abspath(f"processing_data/unknown_faces/{counter}")
                             os.makedirs(unknown_face_folder, exist_ok=True)
                             unknown_face_path = os.path.join(unknown_face_folder, "face.jpg")
@@ -133,7 +136,9 @@ def process_video_final(video_path, employee_folders):
 
                             unknown_faces[counter] = {"path": unknown_face_folder, "timestamps": [timestamp]}
                             counter += 1
+                            print("- New unknown face saved.")
                         else:
+                            print(f"- Timestamps updated for known unknown face (ID: {face_id})")
                             unknown_faces[face_id]["timestamps"].append(timestamp)
 
                 os.remove(temp_frame_path)
@@ -144,6 +149,13 @@ def process_video_final(video_path, employee_folders):
         frame_id += 1
 
     cap.release()
+
+    with open('processing_data/employees.json', 'w') as results_file:
+        json.dump(results, results_file, indent=4)
+
+    with open('processing_data/unknown_faces.json', 'w') as unknown_faces_file:
+        json.dump(unknown_faces, unknown_faces_file, indent=4)
+
     return results, unknown_faces
 
 # Поиск ТОЛЬКО сотрудников
