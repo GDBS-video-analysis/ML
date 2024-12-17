@@ -30,3 +30,4 @@ SQLAlchemy==2.0.36
 asyncpg==0.30.0
 python-dotenv==1.0.1
 Flask-Cors==5.0.0
+Werkzeug==3.0.6
